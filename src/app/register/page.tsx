@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -23,6 +23,12 @@ export default function RegisterPage() {
     setGoogleLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const origin = window.location.origin;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -35,7 +41,14 @@ export default function RegisterPage() {
         throw oauthError;
       }
     } catch (err: any) {
-      setError(err.message || "Google registration failed.");
+      const msg = err.message || "";
+      if (msg.includes("provider is not enabled") || msg.includes("Unsupported provider")) {
+        setError("Google sign-in is not enabled in the Supabase project. Please enable the Google provider in your Supabase Dashboard.");
+      } else if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+        setError("Authentication service configuration error: Supabase API key is invalid or unconfigured.");
+      } else {
+        setError(msg || "Google registration failed.");
+      }
       setGoogleLoading(false);
     }
   };
@@ -52,6 +65,12 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const origin = window.location.origin;
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -65,6 +84,14 @@ export default function RegisterPage() {
       });
 
       if (signUpError) {
+        const msg = signUpError.message || "";
+        if (msg.includes("User already registered")) {
+          throw new Error("An account with this email already exists.");
+        } else if (msg.includes("Password should be at least")) {
+          throw new Error("Password must be at least 6 characters long.");
+        } else if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+          throw new Error("Authentication service configuration error: Supabase API key is invalid or unconfigured.");
+        }
         throw signUpError;
       }
 

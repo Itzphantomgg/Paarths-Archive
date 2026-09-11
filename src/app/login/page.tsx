@@ -4,7 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 function LoginForm() {
   const router = useRouter();
@@ -25,6 +25,12 @@ function LoginForm() {
     setGoogleLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const origin = window.location.origin;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -37,7 +43,14 @@ function LoginForm() {
         throw oauthError;
       }
     } catch (err: any) {
-      setError(err.message || "Google authentication failed.");
+      const msg = err.message || "";
+      if (msg.includes("provider is not enabled") || msg.includes("Unsupported provider")) {
+        setError("Google sign-in is not enabled in the Supabase project. Please enable the Google provider in your Supabase Dashboard.");
+      } else if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+        setError("Authentication service configuration error: Supabase API key is invalid or unconfigured.");
+      } else {
+        setError(msg || "Google sign-in could not be completed.");
+      }
       setGoogleLoading(false);
     }
   };
@@ -48,17 +61,25 @@ function LoginForm() {
     setLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (signInError) {
-        // Humanize error message for archivist feel
-        if (signInError.message.includes("Invalid login credentials")) {
-          throw new Error("Invalid credentials. Vault access denied.");
-        } else if (signInError.message.includes("Email not confirmed")) {
-          throw new Error("Email has not been confirmed yet. Please verify your inbox.");
+        const msg = signInError.message || "";
+        if (msg.includes("Invalid login credentials")) {
+          throw new Error("Email or password is incorrect.");
+        } else if (msg.includes("Email not confirmed")) {
+          throw new Error("Please verify your email before signing in.");
+        } else if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+          throw new Error("Authentication service configuration error: Supabase API key is invalid or unconfigured.");
         }
         throw signInError;
       }

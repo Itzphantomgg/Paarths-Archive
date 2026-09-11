@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -19,6 +19,12 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const origin = window.location.origin;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
@@ -28,6 +34,10 @@ export default function ForgotPasswordPage() {
       );
 
       if (resetError) {
+        const msg = resetError.message || "";
+        if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+          throw new Error("Authentication service configuration error: Supabase API key is invalid or unconfigured.");
+        }
         throw resetError;
       }
 

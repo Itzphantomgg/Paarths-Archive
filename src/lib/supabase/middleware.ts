@@ -12,8 +12,13 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     "";
 
-  // If no anon key is set yet, allow request to proceed without throwing
-  if (!supabaseAnonKey) {
+  // If no anon key is set yet or is a dummy fallback, allow request to proceed without throwing
+  if (
+    !supabaseAnonKey ||
+    supabaseAnonKey === "ey-build-fallback-anon-key" ||
+    supabaseAnonKey === "your-supabase-anon-key" ||
+    supabaseAnonKey.trim() === ""
+  ) {
     return { supabaseResponse, user: null };
   }
 

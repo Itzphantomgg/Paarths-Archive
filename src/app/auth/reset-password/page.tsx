@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -33,6 +33,12 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Authentication configuration incomplete: Supabase API key is missing. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        );
+      }
+
       const { error: resetError } = await supabase.auth.updateUser({
         password,
       });

@@ -126,7 +126,7 @@ export default function SettingsClient({ user, counts }: SettingsClientProps) {
         </div>
 
         <p className="text-xs text-neutral-400 leading-relaxed">
-          The archive is presently operating on a high-speed relational database (<code className="text-neutral-300 font-mono">dev.db</code> via Prisma). To sync with Supabase PostgreSQL in the cloud, simply provide your <code className="text-neutral-300 font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="text-neutral-300 font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code className="text-neutral-300 font-mono">.env.local</code>. The schema is pre-configured in <code className="text-neutral-300 font-mono">supabase/schema.sql</code>.
+          The archive uses Prisma ORM connected to Supabase PostgreSQL in the cloud. Authentication is secured by Supabase Auth using <code className="text-neutral-300 font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="text-neutral-300 font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
         </p>
       </div>
     </div>

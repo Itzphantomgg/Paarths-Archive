@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { syncUserToDb } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -14,6 +14,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!isSupabaseServerConfigured()) {
+      return NextResponse.json(
+        { error: "Authentication service configuration incomplete: Supabase API key is missing or unconfigured. Please configure NEXT_PUBLIC_SUPABASE_ANON_KEY." },
+        { status: 503 }
+      );
+    }
+
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
@@ -21,8 +28,17 @@ export async function POST(request: Request) {
     });
 
     if (error || !data?.user) {
+      const msg = error?.message || "";
+      let errorResponse = "Invalid credentials. Vault access denied.";
+      if (msg.includes("Invalid login credentials")) {
+        errorResponse = "Email or password is incorrect.";
+      } else if (msg.includes("Email not confirmed")) {
+        errorResponse = "Please verify your email before signing in.";
+      } else if (msg.includes("Invalid API key") || msg.includes("No API key")) {
+        errorResponse = "Authentication service configuration error: Supabase API key is invalid or unconfigured.";
+      }
       return NextResponse.json(
-        { error: error?.message || "Invalid credentials. Vault access denied." },
+        { error: errorResponse },
         { status: 401 }
       );
     }
