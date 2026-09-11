@@ -51,15 +51,15 @@ export default async function StoryPage({ params }: StoryPageProps) {
     notFound();
   }
 
-  // Privacy Enforcement: If story is DRAFT, only allow if authenticated
-  if (story.status === "DRAFT" && !user) {
+  // Privacy Enforcement: Only authenticated owner can read private stories by slug
+  if (!user || (story.authorId !== user.id && user.role !== "ADMIN")) {
     notFound();
   }
 
-  // Fetch adjacent stories for book-like pagination
+  // Fetch adjacent stories within the user's private archive for book-like pagination
   const previousStory = await prisma.story.findFirst({
     where: {
-      status: "PUBLISHED",
+      authorId: user.id,
       createdAt: { lt: story.createdAt },
     },
     orderBy: { createdAt: "desc" },
@@ -68,14 +68,18 @@ export default async function StoryPage({ params }: StoryPageProps) {
 
   const nextStory = await prisma.story.findFirst({
     where: {
-      status: "PUBLISHED",
+      authorId: user.id,
       createdAt: { gt: story.createdAt },
     },
     orderBy: { createdAt: "asc" },
     select: { title: true, slug: true, chapter: { select: { number: true, title: true } } },
   });
 
-  const formattedDate = formatStoryDate(story);
+  const formattedDate = formatStoryDate(
+    story.approximateDate,
+    story.exactDate,
+    story.year
+  );
 
   return (
     <article className="min-h-screen bg-[#050505] text-[#EDEDEB] pt-32 pb-24 px-6 sm:px-12 relative">
@@ -83,27 +87,35 @@ export default async function StoryPage({ params }: StoryPageProps) {
         {/* Top Minimal Return Link */}
         <div className="mb-14 flex items-center justify-between border-b border-white/10 pb-6">
           <Link
-            href="/archive"
+            href="/admin"
             className="group inline-flex items-center space-x-2 font-mono text-[11px] tracking-[0.25em] text-neutral-400 hover:text-white uppercase transition"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
-            <span>RETURN TO ARCHIVE</span>
+            <span>RETURN TO MY ARCHIVE</span>
           </Link>
 
-          {story.status === "DRAFT" && (
-            <span className="font-mono text-[10px] tracking-[0.25em] uppercase px-2.5 py-1 rounded bg-amber-950/40 text-amber-300 border border-amber-800/60">
-              PRIVATE DRAFT
-            </span>
-          )}
+          <div className="flex items-center space-x-3">
+            {story.status === "DRAFT" ? (
+              <span className="font-mono text-[10px] tracking-[0.25em] uppercase px-2.5 py-1 rounded bg-amber-950/40 text-amber-300 border border-amber-800/60">
+                PRIVATE DRAFT
+              </span>
+            ) : story.shareStatus === "SHARED" ? (
+              <span className="font-mono text-[10px] tracking-[0.25em] uppercase px-2.5 py-1 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/60">
+                SHARED VIA KEY
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] tracking-[0.25em] uppercase px-2.5 py-1 rounded bg-neutral-900 text-neutral-400 border border-white/10">
+                PRIVATE VAULT
+              </span>
+            )}
 
-          {user && (
             <Link
               href={`/admin/editor?id=${story.id}`}
-              className="font-mono text-[10px] tracking-[0.25em] text-neutral-400 hover:text-white uppercase transition border border-white/20 px-3 py-1 rounded-full hover:border-white"
+              className="font-mono text-[10px] tracking-[0.25em] text-neutral-300 hover:text-white uppercase transition border border-white/20 px-3 py-1 rounded-full hover:border-white"
             >
               EDIT ENTRY
             </Link>
-          )}
+          </div>
         </div>
 
         {/* Story Header */}

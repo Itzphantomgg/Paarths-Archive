@@ -29,8 +29,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found." }, { status: 404 });
     }
 
-    if (story.status === "DRAFT" && !user) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!user || (story.authorId !== user.id && user.role !== "ADMIN")) {
+      return NextResponse.json({ error: "Unauthorized access: Archive is private." }, { status: 401 });
     }
 
     return NextResponse.json({ story });
@@ -77,7 +77,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const readingTime = content ? estimateReadingTime(content) : existing.readingTimeMinutes;
 
     let publishedAt = existing.publishedAt;
-    if (status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+    if (status === "PRIVATE" && existing.status === "DRAFT") {
       publishedAt = new Date();
     }
 

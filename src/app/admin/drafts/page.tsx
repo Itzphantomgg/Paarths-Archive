@@ -1,12 +1,18 @@
 import React from "react";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import StoryManagerTable from "@/components/admin/StoryManagerTable";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDraftsPage() {
+  const user = await getCurrentUser();
+
   const stories = await prisma.story.findMany({
-    where: { status: "DRAFT" },
+    where: {
+      ...(user ? { authorId: user.id } : {}),
+      status: "DRAFT",
+    },
     orderBy: { updatedAt: "desc" },
     include: {
       chapter: {
@@ -22,11 +28,11 @@ export default async function AdminDraftsPage() {
           Private Drafts
         </h2>
         <p className="font-mono text-xs text-neutral-400 mt-1">
-          Unpublished fragments and memories hidden from public visitors.
+          Unpublished fragments and memories currently in progress.
         </p>
       </div>
 
-      <StoryManagerTable initialStories={stories} filterStatus="DRAFT" />
+      <StoryManagerTable initialStories={stories as any} />
     </div>
   );
 }

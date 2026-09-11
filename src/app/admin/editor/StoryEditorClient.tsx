@@ -1,21 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Save,
-  Send,
-  Eye,
   Trash2,
   ArrowLeft,
-  Sparkles,
   BookOpen,
   Edit3,
-  Calendar,
-  MapPin,
-  Users,
+  Share2,
+  Copy,
+  Check,
+  Link2Off,
+  Lock,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -46,9 +45,11 @@ export default function StoryEditorClient({
   const [excerpt, setExcerpt] = useState(initialStory?.excerpt || "");
   const [chapterId, setChapterId] = useState(initialStory?.chapterId || (chapters[0]?.id ?? ""));
   const [storyType, setStoryType] = useState(initialStory?.storyType || "CHILDHOOD");
-  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED">(
-    initialStory?.status || "DRAFT"
+  const [status, setStatus] = useState<"DRAFT" | "PRIVATE">(
+    initialStory?.status === "DRAFT" ? "DRAFT" : "PRIVATE"
   );
+  const [shareStatus, setShareStatus] = useState<string>(initialStory?.shareStatus || "PRIVATE");
+  const [shareToken, setShareToken] = useState<string | null>(initialStory?.shareToken || null);
   const [approximateDate, setApproximateDate] = useState(
     initialStory?.approximateDate || ""
   );
@@ -66,11 +67,13 @@ export default function StoryEditorClient({
 
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Curated monochrome film image presets for rapid selection
+  // Curated monochrome film image presets (Zero gaming imagery)
   const curatedPresets = [
-    { label: "Misty Hills", url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1400&auto=format&fit=crop" },
+    { label: "Misty Peaks", url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1400&auto=format&fit=crop" },
     { label: "Solitary Tree", url: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=1400&auto=format&fit=crop" },
     { label: "Night Railroad", url: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=1400&auto=format&fit=crop" },
     { label: "Vintage Alley", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1400&auto=format&fit=crop" },
@@ -79,20 +82,21 @@ export default function StoryEditorClient({
     { label: "Desert Shore", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1400&auto=format&fit=crop" },
   ];
 
-  const handleSave = async (publishStatus?: "DRAFT" | "PUBLISHED") => {
+  // Save story
+  const handleSave = async (targetStatus?: "DRAFT" | "PRIVATE") => {
     if (!title.trim()) {
       setNotification({ type: "error", message: "Please enter a story title." });
       return;
     }
     if (!content.trim()) {
-      setNotification({ type: "error", message: "Please enter memory content." });
+      setNotification({ type: "error", message: "Please enter memory narrative text." });
       return;
     }
 
     setIsSaving(true);
     setNotification(null);
 
-    const targetStatus = publishStatus || status;
+    const finalStatus = targetStatus || status;
 
     const payload = {
       title,
@@ -101,7 +105,7 @@ export default function StoryEditorClient({
       excerpt,
       chapterId: chapterId || null,
       storyType,
-      status: targetStatus,
+      status: finalStatus,
       approximateDate,
       year: year ? parseInt(year, 10) : null,
       location,
@@ -131,10 +135,10 @@ export default function StoryEditorClient({
         throw new Error(data.error || "Failed to save memory.");
       }
 
-      setStatus(targetStatus);
+      setStatus(finalStatus);
       setNotification({
         type: "success",
-        message: targetStatus === "PUBLISHED" ? "Memory published to vault." : "Draft saved securely.",
+        message: finalStatus === "PRIVATE" ? "Memory saved safely in vault." : "Draft saved securely.",
       });
 
       if (!storyId && data.story?.id) {
@@ -149,9 +153,84 @@ export default function StoryEditorClient({
     }
   };
 
+  // Generate private share link
+  const handleShareStory = async () => {
+    if (!storyId) {
+      setNotification({ type: "error", message: "Please save the story before generating a share link." });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const res = await fetch(`/api/stories/${storyId}/share`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.shareToken) {
+        setShareStatus("SHARED");
+        setShareToken(data.shareToken);
+        const shareUrl = `${window.location.origin}/shared/${data.shareToken}`;
+        navigator.clipboard.writeText(shareUrl);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 3000);
+        setNotification({
+          type: "success",
+          message: "Private share link generated and copied to clipboard!",
+        });
+        router.refresh();
+      } else {
+        throw new Error(data.error || "Failed to generate share link.");
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  // Revoke share link
+  const handleRevokeShare = async () => {
+    if (!storyId) return;
+    if (!confirm("Revoke private share dispatch? Anyone with the existing link will no longer be able to read it.")) {
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const res = await fetch(`/api/stories/${storyId}/share`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setShareStatus("REVOKED");
+        setNotification({
+          type: "success",
+          message: "Share dispatch revoked. Link is now inactive.",
+        });
+        router.refresh();
+      } else {
+        throw new Error("Failed to revoke share dispatch.");
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  // Copy active link
+  const handleCopyLink = () => {
+    if (!shareToken) return;
+    const shareUrl = `${window.location.origin}/shared/${shareToken}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+    setNotification({ type: "success", message: "Share link copied to clipboard!" });
+  };
+
+  // Delete story
   const handleDelete = async () => {
     if (!storyId) return;
-    if (!confirm("Are you sure you want to delete this memory entirely?")) return;
+    if (!confirm("Are you sure you want to permanently delete this memory from the vault?")) return;
 
     try {
       const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
@@ -173,22 +252,23 @@ export default function StoryEditorClient({
           className="inline-flex items-center space-x-2 font-mono text-xs tracking-[0.2em] text-neutral-400 hover:text-white uppercase transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Return to Studio</span>
+          <span>Return to My Archive</span>
         </Link>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          {storyId && initialStory?.slug && status === "PUBLISHED" && (
+        {/* Action Buttons: SAVE DRAFT, SAVE, SHARE, REVOKE SHARE, DELETE */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {storyId && initialStory?.slug && (
             <Link
               href={`/story/${initialStory.slug}`}
               target="_blank"
               className="inline-flex items-center space-x-1.5 font-mono text-xs tracking-[0.18em] text-neutral-400 hover:text-white uppercase border border-white/10 hover:border-white px-3.5 py-2 rounded-full transition"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>View Public</span>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Read in Book</span>
             </Link>
           )}
 
+          {/* Delete Action */}
           {storyId && (
             <button
               onClick={handleDelete}
@@ -199,6 +279,7 @@ export default function StoryEditorClient({
             </button>
           )}
 
+          {/* Save Draft Action */}
           <button
             onClick={() => handleSave("DRAFT")}
             disabled={isSaving}
@@ -208,14 +289,48 @@ export default function StoryEditorClient({
             <span>Save Draft</span>
           </button>
 
+          {/* Save / Save Memory Action */}
           <button
-            onClick={() => handleSave("PUBLISHED")}
+            onClick={() => handleSave("PRIVATE")}
             disabled={isSaving}
             className="inline-flex items-center space-x-1.5 font-mono text-xs tracking-[0.2em] text-black bg-white hover:bg-neutral-200 uppercase px-5 py-2 rounded-full font-medium transition shadow-lg"
           >
-            <Send className="w-3.5 h-3.5" />
-            <span>{status === "PUBLISHED" ? "Update Published" : "Publish to Archive"}</span>
+            <Lock className="w-3.5 h-3.5" />
+            <span>Save</span>
           </button>
+
+          {/* Share Actions */}
+          {storyId && (
+            shareStatus === "SHARED" && shareToken ? (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleCopyLink}
+                  className="inline-flex items-center space-x-1.5 font-mono text-xs tracking-[0.18em] text-emerald-300 border border-emerald-800/80 bg-emerald-950/40 hover:bg-emerald-900/50 px-3.5 py-2 rounded-full transition"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+                </button>
+                <button
+                  onClick={handleRevokeShare}
+                  disabled={isSharing}
+                  title="Revoke Share"
+                  className="inline-flex items-center space-x-1 font-mono text-xs tracking-[0.18em] text-rose-400 border border-rose-900/50 hover:bg-rose-950/40 px-3 py-2 rounded-full transition"
+                >
+                  <Link2Off className="w-3.5 h-3.5" />
+                  <span>Revoke</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleShareStory}
+                disabled={isSharing}
+                className="inline-flex items-center space-x-1.5 font-mono text-xs tracking-[0.18em] text-neutral-300 hover:text-white border border-white/20 hover:border-white px-3.5 py-2 rounded-full transition"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Share</span>
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -267,8 +382,11 @@ export default function StoryEditorClient({
           </button>
         </div>
 
-        <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 uppercase">
-          STATUS: <strong className={status === "PUBLISHED" ? "text-emerald-400" : "text-amber-400"}>{status}</strong>
+        <div className="flex items-center space-x-3 font-mono text-[10px] tracking-[0.2em] uppercase text-neutral-400">
+          <span>PRIVACY: <strong className={status === "PRIVATE" ? "text-neutral-200" : "text-amber-400"}>{status}</strong></span>
+          {shareStatus === "SHARED" && (
+            <span className="text-emerald-400 font-semibold">• SHARED VIA KEY</span>
+          )}
         </div>
       </div>
 
@@ -278,7 +396,7 @@ export default function StoryEditorClient({
           <div className="space-y-4 border border-white/10 bg-neutral-950/40 p-6 sm:p-8">
             <div>
               <label className="block font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase mb-2">
-                Story Title
+                Memory Title
               </label>
               <input
                 type="text"
@@ -341,6 +459,21 @@ export default function StoryEditorClient({
                 <option value="FICTION">Fiction / Imagined</option>
                 <option value="LETTER">Unsent Letter</option>
                 <option value="REFLECTION">Reflection / Thought</option>
+              </select>
+            </div>
+
+            {/* Status Selector */}
+            <div>
+              <label className="block font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase mb-2">
+                Vault Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as "DRAFT" | "PRIVATE")}
+                className="w-full bg-neutral-900 border border-white/20 text-neutral-200 font-mono text-xs p-2.5 rounded focus:outline-none focus:border-white"
+              >
+                <option value="PRIVATE">PRIVATE (Sealed in Vault)</option>
+                <option value="DRAFT">DRAFT (Unfinished Work)</option>
               </select>
             </div>
 
@@ -427,23 +560,6 @@ export default function StoryEditorClient({
                 className="w-full bg-neutral-900 border border-white/20 text-neutral-200 font-mono text-xs p-2.5 rounded focus:outline-none focus:border-white"
               />
             </div>
-
-            {/* Featured toggle */}
-            <div className="flex items-center space-x-3 pt-6">
-              <input
-                type="checkbox"
-                id="featuredCheck"
-                checked={isFeatured}
-                onChange={(e) => setIsFeatured(e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-neutral-900 text-white focus:ring-0 cursor-pointer"
-              />
-              <label
-                htmlFor="featuredCheck"
-                className="font-mono text-xs tracking-[0.2em] text-neutral-300 uppercase cursor-pointer"
-              >
-                Feature on Homepage
-              </label>
-            </div>
           </div>
 
           {/* Cover Photography */}
@@ -481,7 +597,7 @@ export default function StoryEditorClient({
           <div className="border border-white/10 bg-neutral-950/40 p-6 sm:p-8 space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <label className="font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase">
-                Narrative Text (Markdown Supported: ### Header, &gt; Quote, **bold**, *italic*)
+                Narrative Text (Markdown: ### Header, &gt; Quote, **bold**, *italic*)
               </label>
               <span className="font-mono text-[10px] tracking-[0.2em] text-neutral-400">
                 {content.split(/\s+/).filter(Boolean).length} WORDS

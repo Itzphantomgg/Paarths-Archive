@@ -6,16 +6,25 @@ import { slugify, estimateReadingTime } from "@/lib/utils";
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized: Archive contents are private." }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const chapterId = searchParams.get("chapterId");
+    const shareStatus = searchParams.get("shareStatus");
 
-    // If unauthenticated, only allow fetching PUBLISHED stories
-    const whereClause: any = {};
-    if (!user) {
-      whereClause.status = "PUBLISHED";
-    } else if (status) {
+    const whereClause: any = {
+      authorId: user.id,
+    };
+
+    if (status) {
       whereClause.status = status;
+    }
+
+    if (shareStatus) {
+      whereClause.shareStatus = shareStatus;
     }
 
     if (chapterId) {
@@ -58,7 +67,7 @@ export async function POST(request: Request) {
       content,
       excerpt,
       chapterId,
-      status = "DRAFT",
+      status = "PRIVATE",
       storyType = "MEMORIES",
       approximateDate,
       year,
@@ -96,7 +105,8 @@ export async function POST(request: Request) {
         content,
         excerpt: excerpt?.trim() || subtitle?.trim() || null,
         chapterId: chapterId || null,
-        status,
+        status: status === "DRAFT" ? "DRAFT" : "PRIVATE",
+        shareStatus: "PRIVATE",
         storyType,
         approximateDate: approximateDate?.trim() || null,
         year: year ? parseInt(year, 10) : null,
@@ -107,7 +117,7 @@ export async function POST(request: Request) {
         isFeatured: Boolean(isFeatured),
         readingTimeMinutes: readingTime,
         authorId: user.id,
-        publishedAt: status === "PUBLISHED" ? new Date() : null,
+        publishedAt: status === "PRIVATE" ? new Date() : null,
       },
     });
 

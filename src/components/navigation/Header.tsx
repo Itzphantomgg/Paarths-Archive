@@ -66,47 +66,65 @@ export default function Header() {
           {/* Desktop Right Links */}
           <div className="flex items-center space-x-6 sm:space-x-8">
             <nav className="hidden md:flex items-center space-x-7 text-[11px] font-mono tracking-[0.25em] text-neutral-400 uppercase">
-              <Link
-                href="/archive"
-                className={`transition hover:text-white ${
-                  pathname.startsWith("/archive") ? "text-white" : ""
-                }`}
-              >
-                Archive
-              </Link>
-              <Link
-                href="/about"
-                className={`transition hover:text-white ${
-                  pathname === "/about" ? "text-white" : ""
-                }`}
-              >
-                About
-              </Link>
-              <Link
-                href="/search"
-                className="flex items-center space-x-1.5 transition hover:text-white group"
-              >
-                <Search className="w-3 h-3 text-neutral-500 group-hover:text-white transition" />
-                <span>Search</span>
-              </Link>
-
               {user ? (
                 <>
                   <Link
+                    href="/admin"
+                    className={`transition hover:text-white ${
+                      pathname === "/admin" ? "text-white" : ""
+                    }`}
+                  >
+                    Archive
+                  </Link>
+                  <Link
                     href="/admin/editor"
-                    className="flex items-center space-x-1.5 text-neutral-200 border border-neutral-700/80 px-2.5 py-1 rounded-full hover:border-white transition"
+                    className="flex items-center space-x-1.5 text-neutral-200 border border-neutral-700/80 px-3 py-1 rounded-full hover:border-white transition"
                   >
                     <PenLine className="w-3 h-3" />
                     <span>Write</span>
                   </Link>
                   <Link
-                    href="/admin"
-                    className="text-neutral-200 hover:text-white transition"
+                    href="/admin/settings"
+                    className={`transition hover:text-white ${
+                      pathname === "/admin/settings" ? "text-white" : ""
+                    }`}
                   >
-                    Studio
+                    Account
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="transition hover:text-rose-400 text-neutral-400 flex items-center space-x-1"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/archive"
+                    className={`transition hover:text-white ${
+                      pathname.startsWith("/archive") ? "text-white" : ""
+                    }`}
+                  >
+                    Archive
+                  </Link>
+                  <Link
+                    href="/about"
+                    className={`transition hover:text-white ${
+                      pathname === "/about" ? "text-white" : ""
+                    }`}
+                  >
+                    About
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="transition hover:text-white text-neutral-300 border-b border-white/20 hover:border-white pb-0.5"
+                  >
+                    Login
                   </Link>
                 </>
-              ) : null}
+              )}
             </nav>
 
             {/* Circular Menu Button Inspired by Reference Image */}
@@ -150,7 +168,7 @@ export default function Header() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 py-12 max-w-5xl">
             <div className="space-y-6">
               <div className="text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
-                Navigation
+                {user ? "Vault Navigation" : "Sanctuary Index"}
               </div>
               <ul className="space-y-4">
                 <li>
@@ -164,22 +182,35 @@ export default function Header() {
                 </li>
                 <li>
                   <Link
-                    href="/archive"
+                    href={user ? "/admin" : "/archive"}
                     onClick={() => setIsMenuOpen(false)}
                     className="font-serif text-3xl sm:text-4xl text-neutral-300 hover:text-white hover:italic transition block"
                   >
-                    The Archive
+                    {user ? "My Archive" : "Archive Philosophy"}
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/search"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="font-serif text-3xl sm:text-4xl text-neutral-300 hover:text-white hover:italic transition block"
-                  >
-                    Search Memories
-                  </Link>
-                </li>
+                {user && (
+                  <>
+                    <li>
+                      <Link
+                        href="/admin/editor"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="font-serif text-3xl sm:text-4xl text-neutral-300 hover:text-white hover:italic transition block"
+                      >
+                        Writing Desk
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/search"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="font-serif text-3xl sm:text-4xl text-neutral-300 hover:text-white hover:italic transition block"
+                      >
+                        Search Vault
+                      </Link>
+                    </li>
+                  </>
+                )}
                 <li>
                   <Link
                     href="/about"
@@ -195,64 +226,22 @@ export default function Header() {
             {/* Chapters / Categories Column */}
             <div className="space-y-6">
               <div className="text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
-                Core Chapters
+                {user ? "Organized Chapters" : "Thematic Volumes (Private)"}
               </div>
               <div className="grid grid-cols-2 gap-y-3 font-mono text-xs tracking-[0.2em] text-neutral-400">
-                <Link
-                  href="/chapter/childhood"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  01 CHILDHOOD
-                </Link>
-                <Link
-                  href="/chapter/growing-up"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  02 GROWING UP
-                </Link>
-                <Link
-                  href="/chapter/people"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  03 PEOPLE
-                </Link>
-                <Link
-                  href="/chapter/incidents"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  04 INCIDENTS
-                </Link>
-                <Link
-                  href="/chapter/fragments"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  05 FRAGMENTS
-                </Link>
-                <Link
-                  href="/chapter/fiction"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  06 FICTION
-                </Link>
-                <Link
-                  href="/chapter/letters"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="hover:text-white transition"
-                >
-                  07 LETTERS
-                </Link>
+                <span className="text-neutral-500">01 CHILDHOOD</span>
+                <span className="text-neutral-500">02 GROWING UP</span>
+                <span className="text-neutral-500">03 PEOPLE</span>
+                <span className="text-neutral-500">04 INCIDENTS</span>
+                <span className="text-neutral-500">05 FRAGMENTS</span>
+                <span className="text-neutral-500">06 FICTION</span>
+                <span className="text-neutral-500">07 LETTERS</span>
               </div>
 
               {/* Private Writing System Link */}
               <div className="pt-6 border-t border-white/10 flex flex-col space-y-3">
                 <div className="text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
-                  Private Studio
+                  Archivist Portal
                 </div>
                 {user ? (
                   <div className="flex items-center justify-between">
@@ -262,23 +251,23 @@ export default function Header() {
                       className="font-mono text-xs tracking-[0.2em] text-neutral-300 hover:text-white flex items-center space-x-2"
                     >
                       <User className="w-3.5 h-3.5" />
-                      <span>{user.name}&apos;s Studio</span>
+                      <span>{user.name}&apos;s Vault</span>
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="font-mono text-[10px] tracking-[0.2em] text-neutral-500 hover:text-rose-400 flex items-center space-x-1"
                     >
                       <LogOut className="w-3 h-3" />
-                      <span>Exit</span>
+                      <span>Exit Vault</span>
                     </button>
                   </div>
                 ) : (
                   <Link
                     href="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="font-mono text-xs tracking-[0.2em] text-neutral-400 hover:text-white"
+                    className="font-mono text-xs tracking-[0.2em] text-neutral-300 hover:text-white border-b border-white/20 pb-0.5 inline-block"
                   >
-                    Enter Private Archive →
+                    Archivist Sign In &rarr;
                   </Link>
                 )}
               </div>

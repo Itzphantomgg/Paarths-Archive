@@ -9,9 +9,9 @@ export default function AdminNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: "ALL STORIES", href: "/admin", icon: BookOpen, exact: true },
+    { label: "MY ARCHIVE", href: "/admin", icon: BookOpen, exact: true },
     { label: "DRAFTS", href: "/admin/drafts", icon: FileText },
-    { label: "PUBLISHED", href: "/admin/published", icon: CheckCircle },
+    { label: "SHARED", href: "/admin/published", icon: CheckCircle },
     { label: "CHAPTERS", href: "/admin/chapters", icon: Layers },
     { label: "WRITE STORY", href: "/admin/editor", icon: FileEdit },
     { label: "SETTINGS", href: "/admin/settings", icon: Settings },

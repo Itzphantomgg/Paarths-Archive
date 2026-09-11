@@ -23,20 +23,36 @@ export function estimateReadingTime(text: string): number {
   return Math.max(1, Math.ceil(words / wordsPerMinute));
 }
 
-export function formatStoryDate(story: {
-  approximateDate?: string | null;
-  year?: number | null;
-  exactDate?: Date | string | null;
-}): string {
-  if (story.approximateDate) {
-    return story.approximateDate;
+export function formatStoryDate(
+  storyOrApprox?:
+    | {
+        approximateDate?: string | null;
+        year?: number | null;
+        exactDate?: Date | string | null;
+      }
+    | string
+    | null,
+  exactDate?: Date | string | null,
+  year?: number | null
+): string {
+  if (storyOrApprox && typeof storyOrApprox === "object") {
+    if (storyOrApprox.approximateDate) return storyOrApprox.approximateDate;
+    if (storyOrApprox.year) return `Circa ${storyOrApprox.year}`;
+    if (storyOrApprox.exactDate) {
+      return new Date(storyOrApprox.exactDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+    return "Date Unrecorded";
   }
-  if (story.year) {
-    return `Circa ${story.year}`;
-  }
-  if (story.exactDate) {
-    const d = new Date(story.exactDate);
-    return d.toLocaleDateString("en-US", {
+
+  const approx = typeof storyOrApprox === "string" ? storyOrApprox : null;
+  if (approx) return approx;
+  if (year) return `Circa ${year}`;
+  if (exactDate) {
+    return new Date(exactDate).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",

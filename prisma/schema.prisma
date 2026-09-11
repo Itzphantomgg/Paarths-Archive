@@ -42,7 +42,11 @@ model Story {
   content            String
   excerpt            String?
   coverImage         String?
-  status             String     @default("DRAFT") // DRAFT, PUBLISHED
+  status             String     @default("PRIVATE") // DRAFT, PRIVATE
+  shareToken         String?    @unique
+  shareStatus        String     @default("PRIVATE") // PRIVATE, SHARED, REVOKED
+  sharedAt           DateTime?
+  shareRevokedAt     DateTime?
   storyType          String     @default("MEMORIES") // CHILDHOOD, GROWING_UP, INCIDENT, PEOPLE, REFLECTION, LETTER, FICTION, FRAGMENT
   exactDate          DateTime?
   approximateDate    String?    // e.g. "Late Autumn, 2014"
