@@ -5,7 +5,10 @@ import os from "os";
 
 function getDatabaseUrl(): string {
   // If an external database URL is explicitly configured (PostgreSQL, Supabase, Turso, etc.)
-  const existingUrl = process.env.DATABASE_URL;
+  const existingUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL;
   if (existingUrl && !existingUrl.startsWith("file:")) {
     return existingUrl;
   }
