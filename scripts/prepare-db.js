@@ -38,6 +38,8 @@ const dbUrl =
   process.env.POSTGRES_URL ||
   '';
 
+const directUrl = process.env.DIRECT_URL || '';
+
 // Detect whether target is PostgreSQL (Supabase, Neon, Vercel Postgres) or SQLite
 const isPostgres =
   dbUrl.startsWith('postgres://') ||
@@ -54,6 +56,9 @@ if (!fs.existsSync(schemaPath)) {
 }
 
 let schema = fs.readFileSync(schemaPath, 'utf8');
+let modified = false;
+
+// 1. Update datasource provider
 const providerRegex = /(datasource\s+db\s*\{[^}]*provider\s*=\s*")(\w+)(")/;
 const match = schema.match(providerRegex);
 
@@ -61,11 +66,28 @@ if (match) {
   const currentProvider = match[2];
   if (currentProvider !== targetProvider) {
     schema = schema.replace(providerRegex, `$1${targetProvider}$3`);
-    fs.writeFileSync(schemaPath, schema, 'utf8');
+    modified = true;
     console.log(`[prepare-db] Switched Prisma provider from '${currentProvider}' to '${targetProvider}' (detected DB: ${isPostgres ? 'PostgreSQL/Supabase' : 'SQLite'}).`);
   } else {
     console.log(`[prepare-db] Prisma provider verified as '${targetProvider}'.`);
   }
+}
+
+// 2. Handle directUrl for Supabase transaction pooler migrations
+if (isPostgres && directUrl) {
+  if (!schema.includes('directUrl')) {
+    schema = schema.replace(/(url\s*=\s*env\("DATABASE_URL"\))/, '$1\n  directUrl = env("DIRECT_URL")');
+    modified = true;
+    console.log('[prepare-db] Configured directUrl for migration connection.');
+  }
 } else {
-  console.warn('[prepare-db] Could not locate provider in datasource db block.');
+  if (schema.includes('directUrl')) {
+    schema = schema.replace(/\r?\n\s*directUrl\s*=\s*env\("DIRECT_URL"\)/g, '');
+    modified = true;
+    console.log('[prepare-db] Removed directUrl for SQLite/single connection.');
+  }
+}
+
+if (modified) {
+  fs.writeFileSync(schemaPath, schema, 'utf8');
 }
