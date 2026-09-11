@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #060606;
+  --foreground: #ededeb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Film Grain Overlay */
+.film-grain {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("/grain.svg");
+  background-repeat: repeat;
+}
+
+/* Subtle Vignette */
+.cinematic-vignette {
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 40%,
+    rgba(5, 5, 5, 0.6) 80%,
+    rgba(5, 5, 5, 0.95) 100%
+  );
+}
+
+/* Center Highlight Glow inspired by the reference image */
+.center-spotlight {
+  background: radial-gradient(
+    ellipse 70% 50% at 50% 45%,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    transparent 70%
+  );
+}
+
+/* Editorial Drop Caps */
+.drop-cap:first-letter {
+  float: left;
+  font-family: var(--font-serif), serif;
+  font-size: 3.8rem;
+  line-height: 0.8;
+  padding-top: 4px;
+  padding-right: 12px;
+  padding-bottom: 4px;
+  color: #ffffff;
+  font-style: italic;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080808;
+}
+::-webkit-scrollbar-thumb {
+  background: #252525;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f3f;
+}
+
+/* Subtle selection color */
+::selection {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}

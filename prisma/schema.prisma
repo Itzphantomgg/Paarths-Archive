@@ -1,0 +1,80 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stories   Story[]
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  number      Int      @default(1)
+  title       String
+  slug        String   @unique
+  subtitle    String?
+  description String?
+  coverImage  String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  stories     Story[]
+}
+
+model Story {
+  id                 String     @id @default(cuid())
+  title              String
+  slug               String     @unique
+  subtitle           String?
+  content            String
+  excerpt            String?
+  coverImage         String?
+  status             String     @default("DRAFT") // DRAFT, PUBLISHED
+  storyType          String     @default("MEMORIES") // CHILDHOOD, GROWING_UP, INCIDENT, PEOPLE, REFLECTION, LETTER, FICTION, FRAGMENT
+  exactDate          DateTime?
+  approximateDate    String?    // e.g. "Late Autumn, 2014"
+  year               Int?       // e.g. 2014
+  location           String?    // e.g. "Somewhere I grew up"
+  peopleInvolved     String?    // e.g. "My grandfather and I"
+  mood               String?    // e.g. "Quiet, Timeless"
+  readingTimeMinutes Int        @default(3)
+  isFeatured         Boolean    @default(false)
+  chapterId          String?
+  chapter            Chapter?   @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  authorId           String
+  author             User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags               StoryTag[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  publishedAt        DateTime?
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  stories   StoryTag[]
+}
+
+model StoryTag {
+  storyId String
+  tagId   String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, tagId])
+}
