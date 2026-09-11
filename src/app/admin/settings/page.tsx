@@ -1,4 +1,5 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import SettingsClient from "./SettingsClient";
@@ -6,10 +7,13 @@ import SettingsClient from "./SettingsClient";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
 
   const [storiesCount, chaptersCount, tagsCount] = await Promise.all([
-    prisma.story.count(),
+    prisma.story.count({ where: { authorId: user.id } }),
     prisma.chapter.count(),
     prisma.tag.count(),
   ]);

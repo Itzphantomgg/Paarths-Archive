@@ -13,6 +13,11 @@ export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized: Archive is private." }, { status: 401 });
+    }
+
     const story = await prisma.story.findUnique({
       where: { id },
       include: {
@@ -29,8 +34,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found." }, { status: 404 });
     }
 
-    if (!user || (story.authorId !== user.id && user.role !== "ADMIN")) {
-      return NextResponse.json({ error: "Unauthorized access: Archive is private." }, { status: 401 });
+    // Strict User Isolation
+    if (story.authorId !== user.id) {
+      return NextResponse.json({ error: "Forbidden: You do not own this memory." }, { status: 403 });
     }
 
     return NextResponse.json({ story });
@@ -72,6 +78,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (!existing) {
       return NextResponse.json({ error: "Story not found." }, { status: 404 });
+    }
+
+    // Strict User Isolation: verify ownership
+    if (existing.authorId !== user.id) {
+      return NextResponse.json({ error: "Forbidden: You do not own this memory." }, { status: 403 });
     }
 
     const readingTime = content ? estimateReadingTime(content) : existing.readingTimeMinutes;
@@ -143,6 +154,19 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
+    }
+
+    const existing = await prisma.story.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Story not found." }, { status: 404 });
+    }
+
+    // Strict User Isolation: verify ownership
+    if (existing.authorId !== user.id) {
+      return NextResponse.json({ error: "Forbidden: You do not own this memory." }, { status: 403 });
     }
 
     await prisma.story.delete({

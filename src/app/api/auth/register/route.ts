@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { hashPassword, signSession, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { syncUserToDb } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -21,58 +21,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
     });
 
-    if (existingUser) {
+    if (error || !data?.user) {
       return NextResponse.json(
-        { error: "An archivist account with this email already exists." },
-        { status: 409 }
+        { error: error?.message || "Failed to initialize new archivist credentials." },
+        { status: 400 }
       );
     }
 
-    const hashedPassword = await hashPassword(password);
+    const dbUser = await syncUserToDb(data.user);
 
-    const user = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password: hashedPassword,
-        role: "ADMIN",
-      },
-    });
-
-    const token = await signSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
-
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: dbUser,
+      session: Boolean(data.session),
     });
-
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return response;
   } catch (error) {
-    console.error("Register error:", error);
+    console.error("[api/auth/register] Register error:", error);
     return NextResponse.json(
       { error: "Failed to initialize new archivist credentials." },
       { status: 500 }

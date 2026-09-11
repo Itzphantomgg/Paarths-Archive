@@ -2,38 +2,51 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
+export default function ResetPasswordPage() {
+  const router = useRouter();
   const supabase = createClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const origin = window.location.origin;
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        {
-          redirectTo: `${origin}/auth/reset-password`,
-        }
-      );
+      const { error: resetError } = await supabase.auth.updateUser({
+        password,
+      });
 
       if (resetError) {
         throw resetError;
       }
 
-      setSubmitted(true);
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/admin");
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || "Failed to dispatch password recovery email.");
+      setError(err.message || "Failed to update master password.");
     } finally {
       setLoading(false);
     }
@@ -44,13 +57,13 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 w-full max-w-md border border-white/10 bg-neutral-950/75 backdrop-blur-xl p-8 sm:p-12 shadow-2xl">
         <div className="text-center space-y-3 pb-8 border-b border-white/10">
           <span className="font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase block">
-            RECOVERY // ARCHIVIST IDENTITY
+            RECOVERY // NEW CREDENTIALS
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl text-white font-normal italic">
-            Key Recovery
+            Reset Password
           </h1>
           <p className="font-serif text-sm text-neutral-300 italic">
-            &ldquo;Memories are persistent; passwords can be reset.&rdquo;
+            Define a new master password for your private archive.
           </p>
         </div>
 
@@ -61,39 +74,42 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        {submitted ? (
-          <div className="py-8 space-y-6 text-center">
-            <div className="w-12 h-12 rounded-full border border-neutral-700 mx-auto flex items-center justify-center text-neutral-300">
+        {success ? (
+          <div className="py-8 space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full border border-emerald-700/50 bg-emerald-950/30 mx-auto flex items-center justify-center text-emerald-400">
               <CheckCircle2 className="w-6 h-6" />
             </div>
-            <p className="font-serif text-base text-neutral-200">
-              Recovery instructions dispatched to <span className="text-white font-mono text-xs">{email}</span>.
+            <h3 className="font-serif text-xl text-white italic">Password Updated</h3>
+            <p className="font-mono text-xs text-neutral-400">
+              Your credentials have been renewed. Entering archive...
             </p>
-            <p className="font-mono text-[11px] tracking-[0.15em] text-neutral-400">
-              Please check your inbox and click the reset link to choose a new password.
-            </p>
-            <div className="pt-4">
-              <Link
-                href="/login"
-                className="inline-flex items-center space-x-2 font-mono text-xs tracking-[0.2em] text-neutral-300 hover:text-white uppercase border-b border-white/40 pb-1"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Return to Login</span>
-              </Link>
-            </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+          <form onSubmit={handleReset} className="space-y-6 pt-6">
             <div>
               <label className="block font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase mb-2">
-                Registered Email
+                New Master Password
               </label>
               <input
-                type="email"
+                type="password"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="archivist@vault.local"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full bg-transparent border-b border-white/20 focus:border-white py-2 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••••••"
                 className="w-full bg-transparent border-b border-white/20 focus:border-white py-2 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-colors"
               />
             </div>
@@ -104,7 +120,8 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full rounded-full border border-neutral-700 hover:border-white text-neutral-200 hover:text-white py-3 px-6 text-xs font-mono tracking-[0.25em] uppercase transition duration-300 bg-neutral-900/60 hover:bg-neutral-900 flex items-center justify-center space-x-2 focus:outline-none disabled:opacity-50"
               >
-                <span>{loading ? "DISPATCHING..." : "SEND RECOVERY DISPATCH"}</span>
+                <span>{loading ? "UPDATING..." : "SAVE NEW PASSWORD"}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -113,7 +130,7 @@ export default function ForgotPasswordPage() {
                 href="/login"
                 className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 hover:text-white uppercase transition"
               >
-                &larr; Back to Login
+                &larr; Return to Login
               </Link>
             </div>
           </form>

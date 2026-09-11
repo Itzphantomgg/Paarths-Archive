@@ -67,32 +67,31 @@ Virtual Journal/
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) with `@tailwindcss/typography`
 - **Database**: [Prisma ORM](https://www.prisma.io/) with SQLite relational database + Supabase mirror schema
-- **Authentication**: Custom session-based auth with `bcryptjs` password hashing, `jose` signed JWT cookies, and route middleware
+- **Authentication**: Supabase Auth (Google OAuth & Email/Password) with `@supabase/ssr` cookies and route middleware
 - **Icons**: [Lucide React](https://lucide.dev/)
 
 ---
 
 ## ✦ Authentication Overview
 
-Authentication is handled through the configured authentication provider:
-- **Session Tokens**: Cryptographically signed using HMAC SHA-256 via `jose` and persisted in secure `httpOnly`, `SameSite=Lax` cookies.
-- **Password Security**: Passwords are salted and hashed using `bcryptjs` before storage.
-- **Archivist Access**: Public visitors can browse published stories, chapters, and manifestos. Creation, editing, draft management, and chapter organization require authenticated archivist credentials.
-- **Archivist Registration**: New archivist keys can be initialized via the `/register` portal or configured directly via environment settings.
+Authentication is handled using **Supabase Auth** as the single source of truth:
+- **Login Methods**: Google OAuth and Email + Password with password recovery.
+- **Session Management**: Secure, httpOnly cookie-based sessions managed by `@supabase/ssr` and refreshed via route middleware.
+- **User-Specific Isolation**: Every authenticated user possesses their own private vault. Stories and memories are permanently isolated by the user's unique Supabase ID.
+- **Private by Default**: All stories are sealed by default. Sharing is strictly intentional via 32-character cryptographic random bearer links (`/shared/<token>`), which can be revoked at any moment.
 
 ---
 
 ## ✦ Environment Variables
 
-Configure the following variables in your local `.env` file or in your production host settings. Refer to `.env.example` for the template.
+Configure the following variables in your local `.env` file or in your production host settings (Vercel). Refer to `.env.example` for the template.
 
 | Variable | Required | Description |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | Optional | Database connection string. Uses local SQLite by default. |
-| `JWT_SECRET` | Recommended | Minimum 32-character secret used to sign session cookies. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Supabase Project URL if using Supabase client. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase public anonymous API key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase service role key for administrative access. |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Your Supabase Project URL (e.g. `https://[ref].supabase.co`). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Your Supabase public anonymous API key or publishable key. |
+| `DATABASE_URL` | **Yes (Cloud)** | PostgreSQL connection string with PgBouncer pooling (`:6543`). |
+| `DIRECT_URL` | **Yes (Cloud)** | PostgreSQL session connection string for migrations and seeding (`:5432`). |
 
 ---
 

@@ -27,8 +27,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found." }, { status: 404 });
     }
 
-    // Verify ownership
-    if (story.authorId !== user.id && user.role !== "ADMIN") {
+    // Strict User Isolation: verify ownership
+    if (story.authorId !== user.id) {
       return NextResponse.json({ error: "Forbidden: Not your story." }, { status: 403 });
     }
 
@@ -75,7 +75,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found." }, { status: 404 });
     }
 
-    if (story.authorId !== user.id && user.role !== "ADMIN") {
+    // Strict User Isolation: verify ownership
+    if (story.authorId !== user.id) {
       return NextResponse.json({ error: "Forbidden: Not your story." }, { status: 403 });
     }
 

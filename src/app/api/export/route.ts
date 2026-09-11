@@ -13,6 +13,9 @@ export async function GET() {
   });
 
   const stories = await prisma.story.findMany({
+    where: {
+      authorId: user.id,
+    },
     include: {
       chapter: true,
       tags: {
@@ -27,6 +30,11 @@ export async function GET() {
   const exportPayload = {
     archiveTitle: "Paarth's Archive",
     exportDate: new Date().toISOString(),
+    archivist: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
     totalStories: stories.length,
     totalChapters: chapters.length,
     chapters,
@@ -36,7 +44,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(exportPayload, null, 2), {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="paarths-archive-export-${new Date().toISOString().slice(0, 10)}.json"`,
+      "Content-Disposition": `attachment; filename="archive-export-${new Date().toISOString().slice(0, 10)}.json"`,
     },
   });
 }

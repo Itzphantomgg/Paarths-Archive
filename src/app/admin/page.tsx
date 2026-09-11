@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus, Lock, Share2, FileText, Layers } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -9,9 +10,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
 
   const stories = await prisma.story.findMany({
-    where: user ? { authorId: user.id } : {},
+    where: { authorId: user.id },
     orderBy: { updatedAt: "desc" },
     include: {
       chapter: {
@@ -24,7 +28,6 @@ export default async function AdminDashboardPage() {
   const privateCount = stories.filter((s) => s.status === "PRIVATE").length;
   const sharedCount = stories.filter((s) => s.shareStatus === "SHARED").length;
   const draftCount = stories.filter((s) => s.status === "DRAFT").length;
-  const chaptersCount = await prisma.chapter.count();
 
   return (
     <div className="space-y-10">
@@ -37,6 +40,9 @@ export default async function AdminDashboardPage() {
           <h1 className="font-serif text-4xl sm:text-5xl text-white font-normal italic">
             My Archive
           </h1>
+          <p className="font-mono text-xs text-neutral-400 mt-1">
+            Archivist: <span className="text-white font-serif italic text-sm">{user.name}</span> ({user.email})
+          </p>
         </div>
 
         <Link

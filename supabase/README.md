@@ -19,6 +19,9 @@ If you have a Supabase project created:
 2. Add it to your `.env.local` or `.env` file (or in your Vercel Project Environment Variables):
    ```env
    DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+   NEXT_PUBLIC_SUPABASE_URL="https://[ref].supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
    ```
 
 3. In your terminal, run:
@@ -30,7 +33,7 @@ This single command will:
 - Detect the PostgreSQL database.
 - Configure the Prisma datasource provider automatically.
 - Push all schemas, tables, unique constraints, and indexes (`prisma db push`).
-- Seed the default author account (`paarth@archive.local` / `archive2026`), 7 chapters, and initial stories.
+- Synchronize the 7 editorial chapters and curated tags.
 
 ---
 
@@ -52,8 +55,8 @@ If you prefer to run SQL directly in the Supabase web console:
   - `share_status TEXT DEFAULT 'PRIVATE'`
 - **Row Level Security (RLS)**:
   - **Public Visitors**: Can **only** read stories where `share_status = 'SHARED'`. Private and draft stories are completely shielded from public discovery.
-  - **Author**: Authenticated user (`auth.uid() = author_id`) has full CRUD rights.
-- **Seed Data**: Creates the 7 chapters, default tags, and the initial author profile.
+  - **User Isolation**: Authenticated users (`auth.uid() = author_id`) can only read and manage their own stories.
+- **Structural Data**: Synchronizes the 7 chapters and default tags.
 
 ---
 
@@ -63,5 +66,5 @@ If you prefer to run SQL directly in the Supabase web console:
 | :--- | :--- |
 | `npm run prepare:db` | Inspects `DATABASE_URL` and syncs Prisma datasource provider (`sqlite` vs `postgresql`). |
 | `npm run db:push` | Syncs Prisma models with the target database without losing data. |
-| `npm run db:setup` | Full 1-command initialization: prepares provider, pushes schema, and seeds data. |
-| `npm run seed` | Re-runs the seed script to populate author, chapters, and stories. |
+| `npm run db:setup` | Full 1-command initialization: prepares provider, pushes schema, and seeds structural chapters/tags. |
+| `npm run seed` | Re-runs the structural seed script to populate chapters and tags. |

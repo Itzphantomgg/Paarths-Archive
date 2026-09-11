@@ -1,5 +1,7 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import StoryEditorClient from "./StoryEditorClient";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,11 @@ interface EditorPageProps {
 }
 
 export default async function AdminEditorPage({ searchParams }: EditorPageProps) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
   const resolvedParams = await searchParams;
   const storyId = resolvedParams.id || null;
 
@@ -21,8 +28,8 @@ export default async function AdminEditorPage({ searchParams }: EditorPageProps)
 
   let initialStory = null;
   if (storyId) {
-    initialStory = await prisma.story.findUnique({
-      where: { id: storyId },
+    initialStory = await prisma.story.findFirst({
+      where: { id: storyId, authorId: user.id },
       include: {
         tags: {
           include: {
@@ -31,6 +38,11 @@ export default async function AdminEditorPage({ searchParams }: EditorPageProps)
         },
       },
     });
+
+    // If story belongs to another user or doesn't exist, redirect to their archive
+    if (!initialStory) {
+      redirect("/admin");
+    }
   }
 
   return (

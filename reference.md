@@ -9,11 +9,11 @@
 
 | Variable Name | Required? | Purpose | Default / Fallback |
 | :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | Optional | Prisma database connection string. Either SQLite (`file:...`) or Postgres. | Auto-configured to bundled `/tmp` database on Vercel |
-| `JWT_SECRET` | Recommended | Signing key for session cookies (`archive_session`). Must be 32+ characters. | Fallback secret provided in `auth.ts` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Supabase Project URL if using Supabase client directly. | Empty |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase Public Anonymous Key. | Empty |
-| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase administrative key for backend jobs. | Empty |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Required** | Supabase Project URL for authentication and API access. | `https://[ref].supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Required** | Supabase public anonymous/publishable key for browser auth. | Empty |
+| `DATABASE_URL` | **Required (Cloud)** | Prisma database connection string with PgBouncer pooling (`:6543`). | Auto-falls back to local SQLite |
+| `DIRECT_URL` | **Required (Cloud)** | Session-mode pooler connection string for schema migrations (`:5432`). | Same as `DATABASE_URL` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase administrative service role key for backend tasks. | Empty |
 
 > **Security Rule**: Never place actual secret keys in source files, `.env.example`, or documentation. Configure production values directly in the Vercel Project Settings Dashboard under **Settings > Environment Variables**.
 

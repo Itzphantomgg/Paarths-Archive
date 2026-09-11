@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { verifyPassword, signSession, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { syncUserToDb } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -14,55 +14,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
 
-    if (!user) {
+    if (error || !data?.user) {
       return NextResponse.json(
-        { error: "Invalid credentials. Vault access denied." },
+        { error: error?.message || "Invalid credentials. Vault access denied." },
         { status: 401 }
       );
     }
 
-    const isMatch = await verifyPassword(password, user.password);
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: "Invalid credentials. Vault access denied." },
-        { status: 401 }
-      );
-    }
+    const dbUser = await syncUserToDb(data.user);
 
-    const token = await signSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
-
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: dbUser,
     });
-
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
-
-    return response;
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("[api/auth/login] Login error:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while entering the vault." },
       { status: 500 }

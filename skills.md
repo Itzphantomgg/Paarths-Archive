@@ -88,11 +88,20 @@ Virtual Journal/
 
 ---
 
-## 4. Authentication Architecture
-- Passwords hashed using `bcryptjs` with salt rounds = 10.
-- Sessions signed via `jose` with HS256 HMAC tokens stored in httpOnly `archive_session` cookie (30-day expiration, `sameSite: "lax"`).
-- Route middleware (`src/middleware.ts`) protects all `/admin/*` routes. Unauthenticated requests are redirected to `/login?redirect=<path>`.
-- Client-side navigation updates dynamically based on `/api/auth/me`.
+## 4. Authentication & User Isolation Architecture
+- **Provider**: Supabase Auth (Single Source of Truth).
+- **Authentication Methods**:
+  - **Google OAuth**: One-click authentication with callback exchange (`/auth/callback`).
+  - **Email + Password**: Real user registration, login, and email verification.
+  - **Password Recovery**: Secure password reset flow via email dispatch (`/auth/reset-password`).
+- **Session Management**: `@supabase/ssr` cookie-based sessions refreshed on each request via `src/middleware.ts`.
+- **User Isolation**:
+  - Every authenticated Supabase user is uniquely identified by their Supabase UUID (`auth.uid()`).
+  - Stories are tied directly to `authorId = supabase_user.id`.
+  - Database queries strictly enforce `where: { authorId: user.id }`.
+  - User A can never browse, search, edit, share, or delete User B's stories.
+- **Route Protection**: `src/middleware.ts` guards all `/admin/*` routes, redirecting unauthenticated visitors to `/login?redirect=<path>`.
+- **Client Navigation**: Automatically reflects user state via `/api/auth/me`.
 
 ---
 

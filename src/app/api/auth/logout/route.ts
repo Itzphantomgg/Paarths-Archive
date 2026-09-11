@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST() {
-  const response = NextResponse.json({ success: true, message: "Logged out from vault." });
-  response.cookies.delete(AUTH_COOKIE_NAME);
-  return response;
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+    return NextResponse.json({ success: true, message: "Archivist session concluded." });
+  } catch (err: any) {
+    console.error("[api/auth/logout] Error:", err);
+    return NextResponse.json({ error: "Failed to sign out." }, { status: 500 });
+  }
 }

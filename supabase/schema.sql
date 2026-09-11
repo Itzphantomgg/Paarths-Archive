@@ -2,10 +2,11 @@
 -- Paarth's Archive - Complete Supabase PostgreSQL Schema & Security
 -- ====================================================================
 -- Architectural Principles:
--- 1. Private-by-Default: Stories are strictly private unless explicitly shared via secure token.
--- 2. Row Level Security (RLS): Public visitors can NEVER select private or draft stories.
--- 3. High Performance: Indexes on slugs, share tokens, and chapter foreign keys.
--- 4. Idempotent: Can be safely re-run without dropping existing data.
+-- 1. Real Supabase Auth: User identity derived directly from auth.uid().
+-- 2. Strict User-Specific Isolation: Every user only accesses their own stories.
+-- 3. Private-by-Default: Stories are sealed from public view.
+-- 4. Secure Share Links: Shared stories accessible only via 32-character random tokens.
+-- 5. Row Level Security (RLS): Enforced at the database engine level.
 -- ====================================================================
 
 -- Enable UUID extension
@@ -16,12 +17,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. TABLES
 -- ====================================================================
 
--- Users Table
+-- Users Table (Synchronized with Supabase Auth)
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY, -- Matches auth.users(id)
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
+    password TEXT DEFAULT '',
     role TEXT DEFAULT 'ADMIN',
     bio TEXT,
     avatar_url TEXT,
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Stories Table (Private by Default)
+-- Stories Table (Private by Default, User-Isolated)
 CREATE TABLE IF NOT EXISTS stories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
@@ -89,7 +90,7 @@ CREATE TABLE IF NOT EXISTS story_tags (
 );
 
 -- ====================================================================
--- 2. NON-DESTRUCTIVE MIGRATIONS (For existing databases)
+-- 2. NON-DESTRUCTIVE MIGRATIONS & INDEXES
 -- ====================================================================
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE;
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS share_status TEXT DEFAULT 'PRIVATE';
@@ -97,8 +98,9 @@ ALTER TABLE stories ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS share_revoked_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE stories ALTER COLUMN status SET DEFAULT 'PRIVATE';
 
--- Indexes for lightning fast queries
+-- Indexes for performance and isolation
 CREATE INDEX IF NOT EXISTS idx_stories_slug ON stories(slug);
+CREATE INDEX IF NOT EXISTS idx_stories_author_id ON stories(author_id);
 CREATE INDEX IF NOT EXISTS idx_stories_share_token ON stories(share_token);
 CREATE INDEX IF NOT EXISTS idx_stories_chapter_id ON stories(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_chapters_slug ON chapters(slug);
@@ -114,10 +116,14 @@ ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE story_tags ENABLE ROW LEVEL SECURITY;
 
--- Clean up existing legacy policies
+-- Clean up existing policies
 DROP POLICY IF EXISTS "Public visitors can view published stories" ON stories;
 DROP POLICY IF EXISTS "Public visitors can view shared stories" ON stories;
 DROP POLICY IF EXISTS "Authors can manage own stories" ON stories;
+DROP POLICY IF EXISTS "Users can read own stories" ON stories;
+DROP POLICY IF EXISTS "Users can insert own stories" ON stories;
+DROP POLICY IF EXISTS "Users can update own stories" ON stories;
+DROP POLICY IF EXISTS "Users can delete own stories" ON stories;
 DROP POLICY IF EXISTS "Public visitors can view chapters" ON chapters;
 DROP POLICY IF EXISTS "Admins can manage chapters" ON chapters;
 DROP POLICY IF EXISTS "Public visitors can view tags" ON tags;
@@ -125,25 +131,37 @@ DROP POLICY IF EXISTS "Admins can manage tags" ON tags;
 DROP POLICY IF EXISTS "Public visitors can view story tags" ON story_tags;
 DROP POLICY IF EXISTS "Admins can manage story tags" ON story_tags;
 
--- A. STORIES POLICIES:
--- 1. Public visitors can ONLY view stories that have been explicitly shared (share_status = 'SHARED')
-CREATE POLICY "Public visitors can view shared stories" ON stories
+-- A. STORIES POLICIES (User Isolation + Bearer Sharing):
+-- 1. Read: Owner can read their own stories, OR anyone with a valid shared token can read that specific story
+CREATE POLICY "Stories read access" ON stories
     FOR SELECT
-    USING (share_status = 'SHARED');
+    USING (
+        (auth.uid() IS NOT NULL AND auth.uid() = author_id)
+        OR (share_status = 'SHARED')
+    );
 
--- 2. Authenticated authors have full CRUD access to their own stories
-CREATE POLICY "Authors can manage own stories" ON stories
-    FOR ALL
+-- 2. Insert: Authenticated user can ONLY insert stories with their own author_id
+CREATE POLICY "Stories insert access" ON stories
+    FOR INSERT
+    WITH CHECK (auth.uid() = author_id);
+
+-- 3. Update: Authenticated user can ONLY update their own stories
+CREATE POLICY "Stories update access" ON stories
+    FOR UPDATE
     USING (auth.uid() = author_id)
     WITH CHECK (auth.uid() = author_id);
 
+-- 4. Delete: Authenticated user can ONLY delete their own stories
+CREATE POLICY "Stories delete access" ON stories
+    FOR DELETE
+    USING (auth.uid() = author_id);
+
 -- B. CHAPTERS POLICIES:
--- Chapters serve as the editorial structure of the archive and are readable by all visitors
 CREATE POLICY "Public visitors can view chapters" ON chapters
     FOR SELECT
     USING (true);
 
-CREATE POLICY "Admins can manage chapters" ON chapters
+CREATE POLICY "Authenticated users can manage chapters" ON chapters
     FOR ALL
     USING (auth.role() = 'authenticated');
 
@@ -152,7 +170,7 @@ CREATE POLICY "Public visitors can view tags" ON tags
     FOR SELECT
     USING (true);
 
-CREATE POLICY "Admins can manage tags" ON tags
+CREATE POLICY "Authenticated users can manage tags" ON tags
     FOR ALL
     USING (auth.role() = 'authenticated');
 
@@ -160,24 +178,13 @@ CREATE POLICY "Public visitors can view story tags" ON story_tags
     FOR SELECT
     USING (true);
 
-CREATE POLICY "Admins can manage story tags" ON story_tags
+CREATE POLICY "Authenticated users can manage story tags" ON story_tags
     FOR ALL
     USING (auth.role() = 'authenticated');
 
 -- ====================================================================
--- 4. SEED DATA (Default author, chapters, tags, and realistic stories)
+-- 4. STRUCTURAL SEED DATA (7 Thematic Chapters & Curated Tags)
 -- ====================================================================
-
--- Insert Primary Author (Paarth, password: archive2026)
-INSERT INTO users (id, name, email, password, role, bio)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'Paarth',
-    'paarth@archive.local',
-    crypt('archive2026', gen_salt('bf', 10)),
-    'ADMIN',
-    'Archivist of fading moments, quiet reflections, and unwritten letters.'
-) ON CONFLICT (email) DO NOTHING;
 
 -- Insert 7 Editorial Chapters
 INSERT INTO chapters (id, number, title, slug, subtitle, description, cover_image, "order")
@@ -272,58 +279,3 @@ VALUES
     ('Urban', 'urban'),
     ('Vintage', 'vintage')
 ON CONFLICT (slug) DO NOTHING;
-
--- Insert Representative Story (Private by Default)
-INSERT INTO stories (
-    title, slug, subtitle, content, excerpt, cover_image, status, share_status,
-    story_type, year, approximate_date, location, people_involved, mood,
-    reading_time_minutes, is_featured, chapter_id, author_id
-)
-VALUES (
-    'The House With The Blue Gate',
-    'the-house-with-the-blue-gate',
-    'We measured our entire world by how far past the iron fence we were allowed to run.',
-    '### The Threshold of the Known
-
-The iron hinges made a high, singing moan whenever the wind pushed against them. In my memory, the gate was twice as tall as it actually was—an impenetrable threshold painted in chipped cerulean blue that had begun to rust around the bolt.
-
-To a seven-year-old, the gate wasn''t merely a boundary between our front gravel courtyard and the unpaved municipal road; it was the edge of the known universe. Everything inside smelled of wet clay pots, hibiscus leaves, and the woodsmoke from the neighbor''s evening kettle. Everything outside was rumor, distant horn blasts, and the mystery of bicycle bells.
-
-My grandfather used to sit on a low cane stool just under the guava shade. He held a brass pocketknife in one hand and peeled sweet limes in one continuous spiral without ever severing the rind.
-
-> *"If you hurry the peel, you bruise the juice,"* he told me once without looking up. *"Things that are rushed always carry an unnecessary bitterness."*
-
-### The Afternoon the Latch Slipped
-
-It happened on a Tuesday in mid-May. A dry northern squall blew through the valley, rattling the corrugated iron shed behind the kitchen. The latch on the blue gate, worn smooth by thirty years of hands, clattered and slipped free.
-
-For three breathless seconds, the gate stood ajar by four inches. 
-
-I stopped spinning my tin top on the porch. The road outside looked entirely different when unhindered by vertical iron bars. A stray calf wandered past; dust curled in small golden eddies under the midday glare. I walked down the stone steps, my sneakers crunching on dry guava twigs.
-
-I reached the blue gate and laid my palm flat against the cool metal. For the first time, I pushed it outward.
-
-I did not run into the street. I didn''t have the audacity for escape. I simply stood on the small stone ramp that connected our driveway to the dirt road and looked down both directions. To the left, the road curved toward the railway crossing where freight engines groaned in the night. To the right, it disappeared into the eucalyptus grove.
-
-When my grandfather''s hand rested gently on my shoulder, he didn''t pull me back. He didn''t raise his voice. He simply stood beside me, looking out at the road as well.
-
-*"Big world,"* he murmured softly. 
-
-*"Does the road ever stop?"* I asked.
-
-He smiled into his white mustache. *"It never stops. But remember what this side of the gate looks like, because one day you''ll spend years trying to find your way back."*',
-    'The iron hinges made a high, singing moan whenever the wind pushed against them. In my memory, the gate was twice as tall as it actually was.',
-    'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=1400&auto=format&fit=crop',
-    'PRIVATE',
-    'PRIVATE',
-    'CHILDHOOD',
-    2007,
-    'Summer, 2007',
-    'Old Cantonment Road',
-    'My grandfather, childhood neighbors',
-    'Warm, Nostalgic, Distant',
-    4,
-    true,
-    '11111111-1111-1111-1111-111111111101',
-    '00000000-0000-0000-0000-000000000001'
-) ON CONFLICT (slug) DO NOTHING;
