@@ -15,6 +15,7 @@
 
 # sqlite database
 *.db
+!prisma/dev.db
 *.db-journal
 
 # environment files

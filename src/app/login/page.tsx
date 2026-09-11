@@ -76,7 +76,7 @@ function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="paarth@archive.local"
+            placeholder="archivist@vault.local"
             className="w-full bg-transparent border-b border-white/20 focus:border-white py-2 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-colors"
           />
         </div>
@@ -115,22 +115,13 @@ function LoginForm() {
         </div>
       </form>
 
-      {/* Quick Demo Credentials Hint */}
       <div className="mt-8 pt-6 border-t border-white/5 text-center">
-        <p className="font-mono text-[10px] tracking-[0.18em] text-neutral-400 uppercase">
-          PRIMARY VAULT CREDENTIALS:
-        </p>
-        <p className="font-mono text-[10px] tracking-[0.15em] text-neutral-400 mt-1">
-          paarth@archive.local &bull; archive2026
-        </p>
-        <div className="mt-4">
-          <Link
-            href="/register"
-            className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 hover:text-white uppercase transition border-b border-transparent hover:border-white"
-          >
-            Need a new archivist key? Register &rarr;
-          </Link>
-        </div>
+        <Link
+          href="/register"
+          className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 hover:text-white uppercase transition border-b border-transparent hover:border-white"
+        >
+          Need an archivist key? Initialize registration &rarr;
+        </Link>
       </div>
     </div>
   );

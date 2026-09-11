@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
               Recovery instructions dispatched to <span className="text-white font-mono text-xs">{email}</span>.
             </p>
             <p className="font-mono text-[11px] tracking-[0.15em] text-neutral-400">
-              For local archive development, default password is <strong className="text-neutral-300">archive2026</strong>.
+              Please check your inbox or consult your vault administrator to complete key restoration.
             </p>
             <div className="pt-4">
               <Link
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="paarth@archive.local"
+                placeholder="archivist@vault.local"
                 className="w-full bg-transparent border-b border-white/20 focus:border-white py-2 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-colors"
               />
             </div>

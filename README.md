@@ -11,7 +11,7 @@ A private-feeling digital archive, autobiography, and memory vault engineered wi
 - **Palette**: Deep monochrome tones — pure black (`#050505`), charcoal (`#0C0C0C`, `#161616`), razor-thin borders (`border-white/10`), off-white typography (`#EDEDEB`), and muted silver accents.
 - **Typography**: High-contrast editorial display serif (*Cormorant Garamond* with italic swashes) paired with minimal grotesque sans (*Inter*) and tracked monospace (*JetBrains Mono*) for metadata.
 - **Cinematic Film Atmosphere**: Procedural SVG 35mm film grain, radial center spotlight glow, and film vignetting.
-- **Auditory Immersion**: Subtle optional analog tape hiss / vinyl warmth synthesizer powered by the Web Audio API.
+- **Auditory Immersion**: Subtle optional analog tape hiss / vinyl warmth synthesizer powered by the browser's Web Audio API.
 
 ---
 
@@ -27,7 +27,7 @@ A private-feeling digital archive, autobiography, and memory vault engineered wi
 - **Personal Manifesto (`/about`)**: Personal reflections on memory preservation and the philosophy of the vault.
 
 ### Private Writing Studio & Admin Suite (`/admin`)
-- **Route Middleware**: Route protection requiring authenticated session cookies.
+- **Route Protection**: Server-side route middleware guarding all `/admin/*` views.
 - **Writing Desk (`/admin/editor`)**:
   - Full Markdown authoring desk with word count and live dual-pane book preview.
   - Flexible memory coordinates: Approximate dates (*“Late Autumn, 2014”*), exact dates, year, location, mood/atmosphere, people involved.
@@ -38,19 +38,65 @@ A private-feeling digital archive, autobiography, and memory vault engineered wi
 
 ---
 
+## ✦ Project Structure
+
+```
+Virtual Journal/
+├── src/
+│   ├── app/                 # Next.js App Router (pages, layouts, dynamic routes)
+│   ├── components/          # Reusable UI, hero, timeline, navigation, editor
+│   ├── lib/                 # Prisma DB singleton, session auth, utilities
+│   └── middleware.ts        # Route protection for private studio
+├── prisma/
+│   ├── schema.prisma        # Database schema
+│   └── seed.ts              # Seeding script
+├── public/
+│   └── grain.svg            # Film grain overlay
+├── supabase/
+│   └── schema.sql           # PostgreSQL / Supabase mirror schema
+├── .env.example             # Environment variable names template
+├── skills.md                # Project skills & architecture reference
+└── reference.md             # Technical reference & deployment runbook
+```
+
+---
+
 ## ✦ Tech Stack
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Router, Turbopack)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) with `@tailwindcss/typography`
-- **Database**: [Prisma ORM](https://www.prisma.io/) with zero-config SQLite relational database (`prisma/schema.prisma`)
-- **Cloud Database**: [Supabase](https://supabase.com/) PostgreSQL mirror schema (`supabase/schema.sql`)
-- **Authentication**: Secure bcrypt password hashing, `jose` JWT cookies, and route middleware
+- **Database**: [Prisma ORM](https://www.prisma.io/) with SQLite relational database + Supabase mirror schema
+- **Authentication**: Custom session-based auth with `bcryptjs` password hashing, `jose` signed JWT cookies, and route middleware
 - **Icons**: [Lucide React](https://lucide.dev/)
 
 ---
 
-## ✦ Getting Started
+## ✦ Authentication Overview
+
+Authentication is handled through the configured authentication provider:
+- **Session Tokens**: Cryptographically signed using HMAC SHA-256 via `jose` and persisted in secure `httpOnly`, `SameSite=Lax` cookies.
+- **Password Security**: Passwords are salted and hashed using `bcryptjs` before storage.
+- **Archivist Access**: Public visitors can browse published stories, chapters, and manifestos. Creation, editing, draft management, and chapter organization require authenticated archivist credentials.
+- **Archivist Registration**: New archivist keys can be initialized via the `/register` portal or configured directly via environment settings.
+
+---
+
+## ✦ Environment Variables
+
+Configure the following variables in your local `.env` file or in your production host settings. Refer to `.env.example` for the template.
+
+| Variable | Required | Description |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | Optional | Database connection string. Uses local SQLite by default. |
+| `JWT_SECRET` | Recommended | Minimum 32-character secret used to sign session cookies. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Supabase Project URL if using Supabase client. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase public anonymous API key. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase service role key for administrative access. |
+
+---
+
+## ✦ Local Development
 
 ### 1. Clone & Install
 ```bash
@@ -63,6 +109,7 @@ npm install
 ```bash
 cp .env.example .env
 ```
+*(Populate `DATABASE_URL` and `JWT_SECRET` in your `.env`)*
 
 ### 3. Initialize & Seed Database
 ```bash
@@ -78,11 +125,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## ✦ Default Archivist Credentials (Local Vault)
+## ✦ Vercel Deployment Guide
 
-- **Login URL**: `http://localhost:3000/login`
-- **Archivist Email**: `paarth@archive.local`
-- **Password**: `archive2026`
+Deploying Paarth's Archive to Vercel takes only a few minutes:
+
+1. **Push to GitHub**:
+   Ensure your latest code is committed and pushed to your GitHub repository.
+2. **Import into Vercel**:
+   Go to [vercel.com/new](https://vercel.com/new) and import your `Paarths-Archive` repository.
+3. **Framework Preset**:
+   Select **Next.js** (detected automatically).
+4. **Environment Variables**:
+   In the **Environment Variables** section of the Vercel import screen, add:
+   - `JWT_SECRET`: A secure 32+ character random string.
+   - `DATABASE_URL`: (Optional) If connecting to Supabase or an external PostgreSQL database, provide your connection string. For standalone zero-config deployments, the built-in SQLite database adapter will auto-initialize in `/tmp`.
+5. **Deploy**:
+   Click **Deploy**.
+6. **Check Deployment Logs**:
+   Once the build finishes, your deployment will be live. You can inspect logs under the **Deployments** tab if any build-time or runtime warnings occur.
 
 ---
 
