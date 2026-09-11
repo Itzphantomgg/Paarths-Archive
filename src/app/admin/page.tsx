@@ -14,15 +14,31 @@ export default async function AdminDashboardPage() {
     redirect("/login");
   }
 
-  const stories = await prisma.story.findMany({
-    where: { authorId: user.id },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      chapter: {
-        select: { id: true, title: true, number: true },
-      },
-    },
-  });
+  let stories: any[] = [];
+  let chapters: any[] = [];
+  let fetchError = false;
+
+  try {
+    const [fetchedStories, fetchedChapters] = await Promise.all([
+      prisma.story.findMany({
+        where: { authorId: user.id },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          chapter: {
+            select: { id: true, title: true, number: true },
+          },
+        },
+      }),
+      prisma.chapter.findMany({
+        orderBy: { order: "asc" },
+      }),
+    ]);
+    stories = fetchedStories;
+    chapters = fetchedChapters;
+  } catch (err) {
+    console.error("[admin/page] Error loading archive stories:", err);
+    fetchError = true;
+  }
 
   const totalStories = stories.length;
   const privateCount = stories.filter((s) => s.status === "PRIVATE").length;
@@ -53,6 +69,17 @@ export default async function AdminDashboardPage() {
           <span>NEW STORY</span>
         </Link>
       </div>
+
+      {fetchError && (
+        <div className="border border-rose-900/50 bg-rose-950/20 p-6 text-center space-y-3 font-mono text-xs text-rose-300">
+          <p className="font-serif text-lg text-white italic">
+            Unable to connect to the archive vault database.
+          </p>
+          <p className="text-neutral-400">
+            Please check your database connection or refresh the page.
+          </p>
+        </div>
+      )}
 
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 font-mono">
@@ -99,6 +126,54 @@ export default async function AdminDashboardPage() {
 
       {/* Stories Table with Tabs */}
       <StoryManagerTable initialStories={stories as any} />
+
+      {/* Thematic Chapters Overview */}
+      {chapters.length > 0 && (
+        <div className="pt-12 border-t border-white/10 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase block">
+                VOLUME INDEX // THEMATIC STRUCTURE
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl text-white italic font-normal mt-1">
+                Thematic Chapters
+              </h2>
+            </div>
+            <Link
+              href="/admin/chapters"
+              className="font-mono text-xs tracking-[0.2em] text-neutral-400 hover:text-white uppercase transition"
+            >
+              Organize Chapters &rarr;
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {chapters.map((ch) => {
+              const count = stories.filter((s) => s.chapter?.id === ch.id).length;
+              return (
+                <Link
+                  key={ch.id}
+                  href={`/chapter/${ch.slug}`}
+                  className="p-5 border border-white/5 bg-neutral-950/40 hover:border-white/20 transition space-y-2 block group"
+                >
+                  <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase">
+                    <span>CHAPTER {String(ch.number).padStart(2, "0")}</span>
+                    <span className="text-neutral-500">{count} {count === 1 ? "MEMORY" : "MEMORIES"}</span>
+                  </div>
+                  <h3 className="font-serif text-lg text-neutral-200 group-hover:text-white group-hover:italic transition">
+                    {ch.title}
+                  </h3>
+                  {ch.subtitle && (
+                    <p className="font-serif text-xs text-neutral-400 italic line-clamp-1">
+                      &ldquo;{ch.subtitle}&rdquo;
+                    </p>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

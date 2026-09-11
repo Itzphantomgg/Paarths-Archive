@@ -24,28 +24,82 @@ export async function syncUserToDb(supabaseUser: {
     email.split("@")[0] ||
     "Archivist";
 
-  const dbUser = await prisma.user.upsert({
-    where: { id: supabaseUser.id },
-    update: {
-      email,
-      name,
-    },
-    create: {
+  try {
+    // 1. Check if user already exists by Supabase Auth UID
+    let existingUser = await prisma.user.findUnique({
+      where: { id: supabaseUser.id },
+    });
+
+    if (existingUser) {
+      if (existingUser.name !== name || existingUser.email !== email) {
+        existingUser = await prisma.user.update({
+          where: { id: supabaseUser.id },
+          data: { name, email },
+        });
+      }
+      return {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        role: existingUser.role,
+      };
+    }
+
+    // 2. Check if a user exists with the same email (e.g. initial seed user)
+    const userByEmail = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (userByEmail) {
+      // Re-link existing stories and migrate ID to match Supabase UID
+      const oldId = userByEmail.id;
+      await prisma.$transaction([
+        prisma.story.updateMany({
+          where: { authorId: oldId },
+          data: { authorId: supabaseUser.id },
+        }),
+        prisma.user.update({
+          where: { id: oldId },
+          data: { id: supabaseUser.id, name, email },
+        }),
+      ]);
+
+      return {
+        id: supabaseUser.id,
+        email,
+        name,
+        role: userByEmail.role,
+      };
+    }
+
+    // 3. Create fresh user
+    const newUser = await prisma.user.create({
+      data: {
+        id: supabaseUser.id,
+        email,
+        name,
+        password: "supabase_managed",
+        role: "ADMIN",
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    return newUser;
+  } catch (dbErr) {
+    console.warn("[auth] syncUserToDb warning (falling back to memory session):", dbErr);
+    // Fallback: return session user even if DB sync temporarily fails
+    return {
       id: supabaseUser.id,
       email,
       name,
-      password: "", // Handled by Supabase Auth
       role: "ADMIN",
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-    },
-  });
-
-  return dbUser;
+    };
+  }
 }
 
 /**

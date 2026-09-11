@@ -143,9 +143,9 @@ export default function StoryManagerTable({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchesTitle = story.title.toLowerCase().includes(q);
-      const matchesChapter = story.chapter?.title.toLowerCase().includes(q);
-      const matchesType = story.storyType.toLowerCase().includes(q);
+      const matchesTitle = story.title?.toLowerCase().includes(q) ?? false;
+      const matchesChapter = story.chapter?.title?.toLowerCase().includes(q) ?? false;
+      const matchesType = story.storyType?.toLowerCase().includes(q) ?? false;
       return matchesTitle || matchesChapter || matchesType;
     }
 
@@ -207,186 +207,216 @@ export default function StoryManagerTable({
         </Link>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative max-w-sm w-full">
-          <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search vault by title, chapter or mood..."
-            className="w-full bg-neutral-950/60 border border-white/10 rounded-full pl-9 pr-4 py-2 text-xs font-mono text-white placeholder-neutral-500 focus:outline-none focus:border-white/40 transition"
-          />
+      {stories.length === 0 ? (
+        <div className="border border-white/10 bg-neutral-950/40 p-12 sm:p-20 text-center space-y-6">
+          <div className="w-12 h-12 rounded-full border border-neutral-800 bg-neutral-900/80 flex items-center justify-center mx-auto text-neutral-400">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div className="space-y-2">
+            <span className="font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase block">
+              YOUR ARCHIVE IS EMPTY
+            </span>
+            <h3 className="font-serif text-3xl sm:text-4xl text-white italic font-normal">
+              Nothing has been written yet.
+            </h3>
+            <p className="font-serif text-base text-neutral-400 italic max-w-md mx-auto">
+              &ldquo;The first page is always the hardest to write.&rdquo;
+            </p>
+          </div>
+          <div className="pt-4">
+            <Link
+              href="/admin/editor"
+              className="inline-flex items-center space-x-2 rounded-full border border-white/20 bg-white hover:bg-neutral-200 text-black px-8 py-3.5 text-xs font-mono tracking-[0.25em] uppercase transition duration-300 shadow-xl"
+            >
+              <Plus className="w-4 h-4" />
+              <span>WRITE YOUR FIRST STORY</span>
+            </Link>
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative max-w-sm w-full">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search vault by title, chapter or mood..."
+                className="w-full bg-neutral-950/60 border border-white/10 rounded-full pl-9 pr-4 py-2 text-xs font-mono text-white placeholder-neutral-500 focus:outline-none focus:border-white/40 transition"
+              />
+            </div>
 
-        <div className="text-xs font-mono tracking-[0.2em] text-neutral-400">
-          SHOWING {filteredStories.length} {filteredStories.length === 1 ? "MEMORY" : "MEMORIES"}
-        </div>
-      </div>
+            <div className="text-xs font-mono tracking-[0.2em] text-neutral-400">
+              SHOWING {filteredStories.length} {filteredStories.length === 1 ? "MEMORY" : "MEMORIES"}
+            </div>
+          </div>
 
-      {/* Stories Table */}
-      <div className="overflow-x-auto border border-white/10 bg-neutral-950/40">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/10 font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase bg-neutral-900/40">
-              <th className="py-3.5 px-6">Memory Title</th>
-              <th className="py-3.5 px-6">Chapter</th>
-              <th className="py-3.5 px-6">Classification</th>
-              <th className="py-3.5 px-6">Date / Year</th>
-              <th className="py-3.5 px-6">Privacy State</th>
-              <th className="py-3.5 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5 font-mono text-xs">
-            {filteredStories.length > 0 ? (
-              filteredStories.map((story) => {
-                const isDraft = story.status === "DRAFT";
-                const isShared = story.shareStatus === "SHARED";
-                const dateLabel = formatStoryDate(
-                  story.approximateDate,
-                  story.exactDate,
-                  story.year
-                );
+          {/* Stories Table */}
+          <div className="overflow-x-auto border border-white/10 bg-neutral-950/40">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 font-mono text-[10px] tracking-[0.25em] text-neutral-400 uppercase bg-neutral-900/40">
+                  <th className="py-3.5 px-6">Memory Title</th>
+                  <th className="py-3.5 px-6">Chapter</th>
+                  <th className="py-3.5 px-6">Classification</th>
+                  <th className="py-3.5 px-6">Date / Year</th>
+                  <th className="py-3.5 px-6">Privacy State</th>
+                  <th className="py-3.5 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono text-xs">
+                {filteredStories.length > 0 ? (
+                  filteredStories.map((story) => {
+                    const isDraft = story.status === "DRAFT";
+                    const isShared = story.shareStatus === "SHARED";
+                    const dateLabel = formatStoryDate(
+                      story.approximateDate,
+                      story.exactDate,
+                      story.year
+                    );
 
-                return (
-                  <tr
-                    key={story.id}
-                    className="hover:bg-neutral-900/30 transition-colors group"
-                  >
-                    {/* Title */}
-                    <td className="py-4 px-6">
-                      <Link
-                        href={`/admin/editor?id=${story.id}`}
-                        className="font-serif text-lg text-neutral-200 group-hover:text-white group-hover:italic transition block"
+                    return (
+                      <tr
+                        key={story.id}
+                        className="hover:bg-neutral-900/30 transition-colors group"
                       >
-                        {story.title}
-                      </Link>
-                      {story.subtitle && (
-                        <p className="text-[11px] font-sans text-neutral-400 italic line-clamp-1 mt-0.5">
-                          &ldquo;{story.subtitle}&rdquo;
-                        </p>
-                      )}
-                    </td>
+                        {/* Title */}
+                        <td className="py-4 px-6">
+                          <Link
+                            href={`/admin/editor?id=${story.id}`}
+                            className="font-serif text-lg text-neutral-200 group-hover:text-white group-hover:italic transition block"
+                          >
+                            {story.title}
+                          </Link>
+                          {story.subtitle && (
+                            <p className="text-[11px] font-sans text-neutral-400 italic line-clamp-1 mt-0.5">
+                              &ldquo;{story.subtitle}&rdquo;
+                            </p>
+                          )}
+                        </td>
 
-                    {/* Chapter */}
-                    <td className="py-4 px-6 text-neutral-400 tracking-wider">
-                      {story.chapter ? (
-                        <span>
-                          {String(story.chapter.number).padStart(2, "0")} {story.chapter.title}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-600">—</span>
-                      )}
-                    </td>
+                        {/* Chapter */}
+                        <td className="py-4 px-6 text-neutral-400 tracking-wider">
+                          {story.chapter ? (
+                            <span>
+                              {String(story.chapter.number).padStart(2, "0")} {story.chapter.title}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-600">—</span>
+                          )}
+                        </td>
 
-                    {/* Type */}
-                    <td className="py-4 px-6 text-neutral-400 uppercase tracking-wider">
-                      {story.storyType}
-                    </td>
+                        {/* Type */}
+                        <td className="py-4 px-6 text-neutral-400 uppercase tracking-wider">
+                          {story.storyType}
+                        </td>
 
-                    {/* Time */}
-                    <td className="py-4 px-6 text-neutral-400">{dateLabel}</td>
+                        {/* Time */}
+                        <td className="py-4 px-6 text-neutral-400">{dateLabel}</td>
 
-                    {/* Privacy State */}
-                    <td className="py-4 px-6">
-                      {isDraft ? (
-                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-amber-950/40 text-amber-300 border border-amber-900/50">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          <span>DRAFT</span>
-                        </span>
-                      ) : isShared ? (
-                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-emerald-950/40 text-emerald-300 border border-emerald-900/50">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span>SHARED</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-neutral-900 text-neutral-400 border border-white/10">
-                          <Lock className="w-2.5 h-2.5" />
-                          <span>PRIVATE</span>
-                        </span>
-                      )}
-                    </td>
+                        {/* Privacy State */}
+                        <td className="py-4 px-6">
+                          {isDraft ? (
+                            <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-amber-950/40 text-amber-300 border border-amber-900/50">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              <span>DRAFT</span>
+                            </span>
+                          ) : isShared ? (
+                            <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-emerald-950/40 text-emerald-300 border border-emerald-900/50">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              <span>SHARED</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase bg-neutral-900 text-neutral-400 border border-white/10">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>PRIVATE</span>
+                            </span>
+                          )}
+                        </td>
 
-                    {/* Actions */}
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end space-x-3 text-neutral-400">
-                        {/* Read Owner Book Page */}
-                        <Link
-                          href={`/story/${story.slug}`}
-                          title="Read Story"
-                          className="p-1 hover:text-white transition"
-                        >
-                          <BookOpen className="w-4 h-4" />
-                        </Link>
-
-                        {/* Share Controls */}
-                        {isShared && story.shareToken ? (
-                          <>
-                            <button
-                              onClick={() => handleCopyShareLink(story.shareToken!)}
-                              title="Copy Private Share Link"
-                              className="p-1 text-emerald-400 hover:text-white transition flex items-center space-x-1"
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end space-x-3 text-neutral-400">
+                            {/* Read Owner Book Page */}
+                            <Link
+                              href={`/story/${story.slug}`}
+                              title="Read Story"
+                              className="p-1 hover:text-white transition"
                             >
-                              {copiedToken === story.shareToken ? (
-                                <Check className="w-4 h-4 text-emerald-300" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
+                              <BookOpen className="w-4 h-4" />
+                            </Link>
+
+                            {/* Share Controls */}
+                            {isShared && story.shareToken ? (
+                              <>
+                                <button
+                                  onClick={() => handleCopyShareLink(story.shareToken!)}
+                                  title="Copy Private Share Link"
+                                  className="p-1 text-emerald-400 hover:text-white transition flex items-center space-x-1"
+                                >
+                                  {copiedToken === story.shareToken ? (
+                                    <Check className="w-4 h-4 text-emerald-300" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleRevokeShare(story)}
+                                  disabled={sharingId === story.id}
+                                  title="Revoke Private Share Link"
+                                  className="p-1 hover:text-rose-400 transition"
+                                >
+                                  <Link2Off className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleGenerateShare(story)}
+                                disabled={sharingId === story.id}
+                                title="Generate Private Share Link"
+                                className="p-1 hover:text-emerald-400 transition"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Edit Link */}
+                            <Link
+                              href={`/admin/editor?id=${story.id}`}
+                              title="Edit Story"
+                              className="p-1 hover:text-white transition"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Link>
+
+                            {/* Delete Button */}
                             <button
-                              onClick={() => handleRevokeShare(story)}
-                              disabled={sharingId === story.id}
-                              title="Revoke Private Share Link"
+                              onClick={() => handleDelete(story.id, story.title)}
+                              disabled={isDeleting === story.id}
+                              title="Delete Story"
                               className="p-1 hover:text-rose-400 transition"
                             >
-                              <Link2Off className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => handleGenerateShare(story)}
-                            disabled={sharingId === story.id}
-                            title="Generate Private Share Link"
-                            className="p-1 hover:text-emerald-400 transition"
-                          >
-                            <Share2 className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {/* Edit Link */}
-                        <Link
-                          href={`/admin/editor?id=${story.id}`}
-                          title="Edit Story"
-                          className="p-1 hover:text-white transition"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </Link>
-
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleDelete(story.id, story.title)}
-                          disabled={isDeleting === story.id}
-                          title="Delete Story"
-                          className="p-1 hover:text-rose-400 transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-neutral-500 font-mono text-xs">
+                      No memories found matching the current tab or query.
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-neutral-500 font-mono text-xs">
-                  No memories found matching the current tab or query.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

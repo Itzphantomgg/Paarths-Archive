@@ -47,7 +47,7 @@ Virtual Journal/
 │   │   ├── page.tsx         # Split editorial hero & conceptual archive lore
 │   │   ├── globals.css      # Monochrome styling, drop-caps, custom scrollbar
 │   │   ├── about/page.tsx   # Personal manifesto on memory preservation
-│   │   ├── archive/         # Conceptual volume overview (public) / redirect to vault (auth)
+│   │   ├── archive/         # Conceptual lore (guest) / Direct private archive & empty state (auth)
 │   │   ├── chapter/[slug]/  # Thematic chapter introduction (public) / stories (auth)
 │   │   ├── story/[slug]/    # Book-like reading view (authenticated owner only)
 │   │   ├── shared/[token]/  # Dedicated, isolated reading view for shared dispatches

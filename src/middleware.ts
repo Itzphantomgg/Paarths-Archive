@@ -11,14 +11,18 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value));
+      return res;
     }
   }
 
   // If user is already logged in and visits /login or /register, redirect to /admin
   if (pathname === "/login" || pathname === "/register") {
     if (user) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+      const res = NextResponse.redirect(new URL("/admin", request.url));
+      supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value));
+      return res;
     }
   }
 

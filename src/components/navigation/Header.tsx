@@ -69,9 +69,9 @@ export default function Header() {
               {user ? (
                 <>
                   <Link
-                    href="/admin"
+                    href="/archive"
                     className={`transition hover:text-white ${
-                      pathname === "/admin" ? "text-white" : ""
+                      pathname.startsWith("/archive") || pathname === "/admin" ? "text-white" : ""
                     }`}
                   >
                     Archive
@@ -182,7 +182,7 @@ export default function Header() {
                 </li>
                 <li>
                   <Link
-                    href={user ? "/admin" : "/archive"}
+                    href="/archive"
                     onClick={() => setIsMenuOpen(false)}
                     className="font-serif text-3xl sm:text-4xl text-neutral-300 hover:text-white hover:italic transition block"
                   >

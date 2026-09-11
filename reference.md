@@ -26,11 +26,12 @@
 | Surface | Unauthenticated Visitor | Authenticated Archivist |
 | :--- | :--- | :--- |
 | `/` (Homepage) | Split Editorial Hero, Lore & Concept | Split Hero + Direct Vault Entry CTA |
-| `/archive` | Conceptual Architecture Manifesto | Direct redirect to `/admin` |
+| `/archive` | Conceptual Architecture Manifesto | Full Private Archive (Memories, Stats, Chapters, or Empty State) |
 | `/chapter/[slug]` | Thematic Volume Overview | Private stories in that chapter |
 | `/story/[slug]` | **404 Not Found** (Hidden) | Full Book Reader |
 | `/shared/[token]` | **Single Shared Story** (Isolated) | Single Shared Story |
 | `/search` | Index Lock Prompt | Full private archive search |
+| `/admin` | Redirected to `/login` | Private Writing Studio & Archive Management |
 | `/admin/*` | Redirected to `/login` | Writing Studio & Vault Dashboard |
 | `/api/stories` | **401 Unauthorized** | Full story CRUD |
 

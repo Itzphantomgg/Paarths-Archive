@@ -64,8 +64,7 @@ function LoginForm() {
       }
 
       if (data?.user) {
-        router.push(redirectPath);
-        router.refresh();
+        window.location.href = redirectPath;
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during authentication.");

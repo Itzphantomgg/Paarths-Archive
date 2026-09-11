@@ -70,8 +70,7 @@ export default function RegisterPage() {
 
       // If user session is returned immediately (email confirmation disabled or auto-confirmed)
       if (data?.session) {
-        router.push("/admin");
-        router.refresh();
+        window.location.href = "/admin";
       } else if (data?.user && !data?.session) {
         // Confirmation email was sent
         setConfirmationSent(true);
