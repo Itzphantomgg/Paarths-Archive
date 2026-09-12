@@ -38,7 +38,14 @@ const dbUrl =
   process.env.POSTGRES_URL ||
   '';
 
-const directUrl = process.env.DIRECT_URL || '';
+let directUrl = process.env.DIRECT_URL || '';
+
+// If directUrl is missing but DATABASE_URL is Supabase pooler (:6543), auto-derive session mode (:5432)
+if (!directUrl && isPostgres && dbUrl.includes(':6543')) {
+  directUrl = dbUrl.replace(':6543', ':5432').replace('?pgbouncer=true', '').replace('&pgbouncer=true', '');
+  process.env.DIRECT_URL = directUrl;
+  console.log('[prepare-db] Auto-derived DIRECT_URL from DATABASE_URL (:6543 -> :5432).');
+}
 
 // Detect whether target is PostgreSQL (Supabase, Neon, Vercel Postgres) or SQLite
 const isPostgres =
